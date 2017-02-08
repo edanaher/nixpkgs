@@ -176,6 +176,10 @@ in stdenv.mkDerivation {
         echo "manylinux1_compatible=False" >> $out/lib/${libPrefix}/_manylinux.py
 
         rm "$out"/lib/python*/plat-*/regen # refers to glibc.dev
+
+        # Determinism: Windows installers were not deterministic.
+        # We're also not interested in building Windows installers.
+        find "$out" -name 'wininst*.exe' | xargs -r rm -f
       '';
 
     passthru = let
