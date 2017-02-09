@@ -58,7 +58,12 @@ in stdenv.mkDerivation {
   '';
 
   postPatch = ''
-    substituteInPlace "Lib/py_compile.py" --replace "source_stats['mtime']" "(0 if 'DETERMINISTIC_BUILD' in os.environ else source_stats['mtime'])"
+    substituteInPlace "Lib/py_compile.py" --replace "source_stats['mtime']" "(1 if 'DETERMINISTIC_BUILD' in os.environ else source_stats['mtime'])"
+    #substituteInPlace "Lib/importlib/_bootstrap_external.py" --replace "message = 'bytecode is stale for {!r}'.format(name)" "message = 'bytecode is stale for {!r}: {!r} vs {!r}'.format(name, _r_long(raw_timestamp), source_mtime)"
+    
+    #substituteInPlace "Lib/importlib/_bootstrap_external.py" --replace "def get_code(self, fullname):" "def get_code(self, fullname, deterministic_build = false):"
+    #substituteInPlace "Lib/importlib/_bootstrap_external.py" --replace "source_mtime = int(st['mtime'])" "source_mtime = (1 if deterministic_build else int(st['mtime']))"
+    substituteInPlace "Lib/importlib/_bootstrap_external.py" --replace "source_mtime = int(st['mtime'])" "source_mtime = 1"
   '' + optionalString (x11Support && (tix != null)) ''
     substituteInPlace "Lib/tkinter/tix.py" --replace "os.environ.get('TIX_LIBRARY')" "os.environ.get('TIX_LIBRARY') or '${tix}/lib'"
   '';
