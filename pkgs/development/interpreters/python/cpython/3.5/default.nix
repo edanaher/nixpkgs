@@ -50,14 +50,28 @@ in stdenv.mkDerivation {
 
   NIX_LDFLAGS = optionalString stdenv.isLinux "-lgcc_s";
 
+  DETERMINISTIC_BUILD = 1;
+
   prePatch = optionalString stdenv.isDarwin ''
     substituteInPlace configure --replace '`/usr/bin/arch`' '"i386"'
     substituteInPlace configure --replace '-Wl,-stack_size,1000000' ' '
   '';
 
-  postPatch = optionalString (x11Support && (tix != null)) ''
+  postPatch = ''
+    substituteInPlace "Lib/py_compile.py" --replace "source_stats['mtime']" "(0 if 'DETERMINISTIC_BUILD' in os.environ else source_stats['mtime'])"
+  '' + optionalString (x11Support && (tix != null)) ''
     substituteInPlace "Lib/tkinter/tix.py" --replace "os.environ.get('TIX_LIBRARY')" "os.environ.get('TIX_LIBRARY') or '${tix}/lib'"
   '';
+
+  CPPFLAGS="${concatStringsSep " " (map (p: "-I${getDev p}/include") buildInputs)}";
+  LDFLAGS="${concatStringsSep " " (map (p: "-L${getLib p}/lib") buildInputs)}";
+  LIBS="${optionalString (!stdenv.isDarwin) "-lcrypt"} ${optionalString (ncurses != null) "-lncurses"}";
+
+  configureFlags = [
+    "--enable-shared"
+    "--with-threads"
+    "--without-ensurepip"
+  ];
 
   preConfigure = ''
     for i in /usr /sw /opt /pkg; do	# improve purity
@@ -67,12 +81,6 @@ in stdenv.mkDerivation {
        export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -msse2"
        export MACOSX_DEPLOYMENT_TARGET=10.6
      ''}
-
-    configureFlagsArray=( --enable-shared --with-threads
-                          CPPFLAGS="${concatStringsSep " " (map (p: "-I${getDev p}/include") buildInputs)}"
-                          LDFLAGS="${concatStringsSep " " (map (p: "-L${getLib p}/lib") buildInputs)}"
-                          LIBS="${optionalString (!stdenv.isDarwin) "-lcrypt"} ${optionalString (ncurses != null) "-lncurses"}"
-                        )
   '';
 
   setupHook = ./setup-hook.sh;
@@ -94,6 +102,10 @@ in stdenv.mkDerivation {
 
     # Python on Nix is not manylinux1 compatible. https://github.com/NixOS/nixpkgs/issues/18484
     echo "manylinux1_compatible=False" >> $out/lib/${libPrefix}/_manylinux.py
+
+    # Determinism: Windows installers were not deterministic.
+    # We're also not interested in building Windows installers.
+    find "$out" -name 'wininst*.exe' | xargs -r rm -f
 
     # Use Python3 as default python
     ln -s "$out/bin/idle3" "$out/bin/idle"
