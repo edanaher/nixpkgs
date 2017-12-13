@@ -419,6 +419,33 @@ let
     '';
   };
 
+  moonscript = buildLuaPackage rec {
+    name = "moonscript-${version}";
+    version = "v0.5.0";
+    src = fetchFromGitHub {
+      owner = "leafo";
+      repo = "moonscript";
+      rev = version;
+      sha256 = "0bx6xici852ji5a1zjsrmvr90ynrfykkhwgc5sdj5gvvnhz5k4fd";
+    };
+    #sourceRoot = "libmpack-${libmpack.rev}-src/binding/lua";
+    #buildInputs = [ libmpack ]; #libtool lua pkgconfig ];
+    #preInstall = ''
+    #  mkdir -p $out/lib/lua/${lua.luaversion}
+    #'';
+    #NIX_CFLAGS_COMPILE = "-Wno-error -fpic";
+    #installFlags = [
+    #  "USE_SYSTEM_LUA=yes"
+    #  "LUA_VERSION_MAJ_MIN="
+    #  "LUA_CMOD_INSTALLDIR=$$out/lib/lua/${lua.luaversion}"
+    #];
+    meta = {
+      description = "A language that compiles to Lua";
+      homepage = "http://moonscript.org";
+      license = stdenv.lib.licenses.mit;
+    };
+  };
+
   mpack = buildLuaPackage rec {
     name = "lua-mpack-${libmpack.version}";
     src = libmpack.src;
